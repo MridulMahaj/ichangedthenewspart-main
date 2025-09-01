@@ -1,5 +1,6 @@
 package VASService.mywork.services;
 
+import VASService.mywork.classes.Subscription;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -58,5 +59,4 @@ public class SubscriptionService {
             return sub;
         });
     }
-
 }
