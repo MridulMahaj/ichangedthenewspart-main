@@ -81,7 +81,7 @@ public class SubscriptionWebSocketController {
     // ---------------- Common methods ----------------
 
     /**
-     * Send OTP using your real MessageCentral API via /sendotp
+     * Send OTP using real MessageCentral API
      */
     private Map<String, Object> sendOtp(int userId, String serviceName, String type) {
         String phone = getUserPhoneNumber(userId);
@@ -96,6 +96,8 @@ public class SubscriptionWebSocketController {
             );
 
             if ("success".equalsIgnoreCase(response.get("status"))) {
+                // store verificationId for later verification if needed
+                subscriptionService.storeVerificationId(phone, response.get("verificationId"));
                 return Map.of(
                         "status", "otp_sent",
                         "message", "OTP sent for " + type + " to phone " + phone,
@@ -116,13 +118,17 @@ public class SubscriptionWebSocketController {
     }
 
     /**
-     * Verify OTP via your real MessageCentral API and subscribe
+     * Verify OTP and subscribe user
      */
     private Map<String, Object> verifyAndSubscribe(int userId, String serviceName, String otp) {
         String phone = getUserPhoneNumber(userId);
 
-        // Call /verifyotp endpoint
-        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
+        // Call real MessageCentral verifyOtp
+        Map<String, Object> request = Map.of(
+                "user_phone_number", phone,
+                "otp", otp
+        );
+
         Map<String, String> response = restTemplate.postForObject(
                 "http://localhost:8080/verifyotp",
                 request,
@@ -133,14 +139,19 @@ public class SubscriptionWebSocketController {
             return Map.of("status", "failed", "message", "OTP verification failed: " + response.get("message"));
         }
 
+        // Use String userId to match DB column type
         boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
-        return success ?
-                Map.of("status", "success", "message", "Subscription successful for " + serviceName) :
-                Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
+
+        if (!success) {
+            return Map.of("status", "failed", "message", "Subscription insertion failed for " + serviceName);
+        }
+
+        return Map.of("status", "success", "message", "Subscription successful for " + phone);
     }
 
+
     /**
-     * Verify OTP via your real MessageCentral API and unsubscribe
+     * Verify OTP and unsubscribe user
      */
     private Map<String, Object> verifyAndUnsubscribe(int userId, String serviceName, String otp) {
         String phone = getUserPhoneNumber(userId);
@@ -158,8 +169,8 @@ public class SubscriptionWebSocketController {
 
         boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
         return success ?
-                Map.of("status", "success", "message", "Unsubscription successful for " + serviceName) :
-                Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
+                Map.of("status", "success", "message", "Unsubscription successful for " + phone) :
+                Map.of("status", "failed", "message", "Unsubscription failed for " + phone);
     }
 
     /**
