@@ -25,19 +25,13 @@ public class SubscriptionController {
     public ResponseEntity<Object> subscribe(@RequestParam String userId, @RequestParam String serviceName) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
         if (phone == null) {
-            return ResponseEntity.status(404).body(Map.of(
-                    "status", "error",
-                    "message", "User not found"
-            ));
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
         try {
             Map<String, Object> otpResponse = otpService.sendOtp(phone);
             if (!"success".equalsIgnoreCase((String) otpResponse.get("status"))) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "status", "failed",
-                        "message", "OTP sending failed"
-                ));
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP sending failed"));
             }
 
             return ResponseEntity.ok(Map.of(
@@ -46,10 +40,7 @@ public class SubscriptionController {
                     "message", "OTP sent to " + phone + " for service " + serviceName
             ));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                    "status", "error",
-                    "message", "OTP service failed: " + e.getMessage()
-            ));
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "OTP service failed: " + e.getMessage()));
         }
     }
 
@@ -59,40 +50,25 @@ public class SubscriptionController {
                                                   @RequestParam String otp) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
         if (phone == null) {
-            return ResponseEntity.status(404).body(Map.of(
-                    "status", "error",
-                    "message", "User not found"
-            ));
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
         try {
             Map<String, Object> verifyResponse = otpService.verifyOtp(phone, otp);
             if (!"success".equalsIgnoreCase((String) verifyResponse.get("status"))) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "status", "failed",
-                        "message", "OTP verification failed"
-                ));
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
             }
 
             boolean success = subscriptionService.subscribeUser(userId, serviceName);
             Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
 
             if (success && updated != null) {
-                return ResponseEntity.ok(Map.of(
-                        "status", "success",
-                        "subscription", updated
-                ));
+                return ResponseEntity.ok(Map.of("status", "success", "subscription", updated));
             } else {
-                return ResponseEntity.status(500).body(Map.of(
-                        "status", "failed",
-                        "message", "Subscription failed"
-                ));
+                return ResponseEntity.status(500).body(Map.of("status", "failed", "message", "Subscription failed"));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                    "status", "error",
-                    "message", "Verification failed: " + e.getMessage()
-            ));
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "Verification failed: " + e.getMessage()));
         }
     }
 
@@ -101,19 +77,13 @@ public class SubscriptionController {
     public ResponseEntity<Object> unsubscribe(@RequestParam String userId, @RequestParam String serviceName) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
         if (phone == null) {
-            return ResponseEntity.status(404).body(Map.of(
-                    "status", "error",
-                    "message", "User not found"
-            ));
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
         try {
             Map<String, Object> otpResponse = otpService.sendOtp(phone);
             if (!"success".equalsIgnoreCase((String) otpResponse.get("status"))) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "status", "failed",
-                        "message", "OTP sending failed"
-                ));
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP sending failed"));
             }
 
             return ResponseEntity.ok(Map.of(
@@ -122,10 +92,7 @@ public class SubscriptionController {
                     "message", "OTP sent to " + phone + " for unsubscribing from " + serviceName
             ));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                    "status", "error",
-                    "message", "OTP service failed: " + e.getMessage()
-            ));
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "OTP service failed: " + e.getMessage()));
         }
     }
 
@@ -135,40 +102,25 @@ public class SubscriptionController {
                                                     @RequestParam String otp) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
         if (phone == null) {
-            return ResponseEntity.status(404).body(Map.of(
-                    "status", "error",
-                    "message", "User not found"
-            ));
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
         try {
             Map<String, Object> verifyResponse = otpService.verifyOtp(phone, otp);
             if (!"success".equalsIgnoreCase((String) verifyResponse.get("status"))) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "status", "failed",
-                        "message", "OTP verification failed"
-                ));
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
             }
 
             boolean success = subscriptionService.unsubscribeUser(userId, serviceName);
             Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
 
             if (success && updated != null) {
-                return ResponseEntity.ok(Map.of(
-                        "status", "success",
-                        "subscription", updated
-                ));
+                return ResponseEntity.ok(Map.of("status", "success", "subscription", updated));
             } else {
-                return ResponseEntity.status(500).body(Map.of(
-                        "status", "failed",
-                        "message", "Unsubscription failed"
-                ));
+                return ResponseEntity.status(500).body(Map.of("status", "failed", "message", "Unsubscription failed"));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                    "status", "error",
-                    "message", "Verification failed: " + e.getMessage()
-            ));
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "Verification failed: " + e.getMessage()));
         }
     }
 }
