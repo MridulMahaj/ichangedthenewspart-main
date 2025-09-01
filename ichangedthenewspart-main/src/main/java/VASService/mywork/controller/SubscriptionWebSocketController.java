@@ -79,24 +79,58 @@ public class SubscriptionWebSocketController {
     }
 
     // ---------------- Common methods ----------------
+
+    /**
+     * Send OTP using your real MessageCentral API via /sendotp
+     */
     private Map<String, Object> sendOtp(int userId, String serviceName, String type) {
         String phone = getUserPhoneNumber(userId);
 
-        // Simulated OTP for testing
-        String simulatedOtp = "1234";
-        subscriptionService.storeOtp(phone, simulatedOtp);
+        Map<String, String> request = Map.of("user_phone_number", phone);
 
-        return Map.of(
-                "status", "otp_sent",
-                "message", "OTP sent for " + type + " to phone " + phone,
-                "simulatedOtp", simulatedOtp // For testing only
-        );
+        try {
+            Map<String, String> response = restTemplate.postForObject(
+                    "http://localhost:8080/sendotp",
+                    request,
+                    Map.class
+            );
+
+            if ("success".equalsIgnoreCase(response.get("status"))) {
+                return Map.of(
+                        "status", "otp_sent",
+                        "message", "OTP sent for " + type + " to phone " + phone,
+                        "verificationId", response.get("verificationId")
+                );
+            } else {
+                return Map.of(
+                        "status", "failed",
+                        "message", "Failed to send OTP: " + response.get("message")
+                );
+            }
+        } catch (Exception e) {
+            return Map.of(
+                    "status", "error",
+                    "message", "Exception while sending OTP: " + e.getMessage()
+            );
+        }
     }
 
+    /**
+     * Verify OTP via your real MessageCentral API and subscribe
+     */
     private Map<String, Object> verifyAndSubscribe(int userId, String serviceName, String otp) {
         String phone = getUserPhoneNumber(userId);
-        if (!subscriptionService.verifyOtp(phone, otp)) {
-            return Map.of("status", "failed", "message", "OTP verification failed");
+
+        // Call /verifyotp endpoint
+        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
+        Map<String, String> response = restTemplate.postForObject(
+                "http://localhost:8080/verifyotp",
+                request,
+                Map.class
+        );
+
+        if (!"success".equalsIgnoreCase(response.get("status"))) {
+            return Map.of("status", "failed", "message", "OTP verification failed: " + response.get("message"));
         }
 
         boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
@@ -105,10 +139,21 @@ public class SubscriptionWebSocketController {
                 Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
     }
 
+    /**
+     * Verify OTP via your real MessageCentral API and unsubscribe
+     */
     private Map<String, Object> verifyAndUnsubscribe(int userId, String serviceName, String otp) {
         String phone = getUserPhoneNumber(userId);
-        if (!subscriptionService.verifyOtp(phone, otp)) {
-            return Map.of("status", "failed", "message", "OTP verification failed");
+
+        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
+        Map<String, String> response = restTemplate.postForObject(
+                "http://localhost:8080/verifyotp",
+                request,
+                Map.class
+        );
+
+        if (!"success".equalsIgnoreCase(response.get("status"))) {
+            return Map.of("status", "failed", "message", "OTP verification failed: " + response.get("message"));
         }
 
         boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
@@ -117,6 +162,9 @@ public class SubscriptionWebSocketController {
                 Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
     }
 
+    /**
+     * Get user phone number from DB
+     */
     private String getUserPhoneNumber(int userId) {
         String sql = "SELECT user_phone_number FROM user WHERE user_id = ?";
         return jdbcTemplate.queryForObject(sql, new Object[]{userId}, String.class);
