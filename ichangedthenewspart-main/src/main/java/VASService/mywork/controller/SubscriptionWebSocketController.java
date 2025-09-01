@@ -4,6 +4,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.client.RestTemplate;
+import VASService.mywork.services.SubscriptionService;
 
 import java.util.Map;
 
@@ -59,9 +60,13 @@ public class SubscriptionWebSocketController {
             return Map.of("status", "failed", "message", "OTP verification failed");
         }
 
-        String result = subscriptionService.subscribe(userId, serviceName);
+        boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
 
-        return Map.of("status", "success", "message", result);
+        if (success) {
+            return Map.of("status", "success", "message", "Subscription successful for " + serviceName);
+        } else {
+            return Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
+        }
     }
 
     private Map<String, Object> verifyAndUnsubscribe(int userId, String serviceName, String otp) {
@@ -69,9 +74,13 @@ public class SubscriptionWebSocketController {
             return Map.of("status", "failed", "message", "OTP verification failed");
         }
 
-        String result = subscriptionService.unsubscribe(userId, serviceName);
+        boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
 
-        return Map.of("status", "success", "message", result);
+        if (success) {
+            return Map.of("status", "success", "message", "Unsubscription successful for " + serviceName);
+        } else {
+            return Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
+        }
     }
 
     private boolean verifyOtp(String phone, String otp) {
