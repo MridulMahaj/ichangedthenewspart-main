@@ -39,7 +39,7 @@ public class SubscriptionWebSocketController {
         }
     }
 
-    private Map<String, Object> sendOtp(String userId, String serviceName, String type) {
+    private Map<String, Object> 'sendOtp'(String userId, String serviceName, String type) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
         Map<String, String> request = Map.of("user_phone_number", phone);
 
