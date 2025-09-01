@@ -3,6 +3,7 @@ package VASService.mywork.controller;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import VASService.mywork.services.SubscriptionService;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,10 +22,10 @@ public class SubscriptionWebSocketController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // WebSocket STOMP entry point
+    // ---------------- STOMP WebSocket ----------------
     @MessageMapping("/subscription")
     @SendTo("/topic/subscription")
-    public Map<String, Object> handleMessage(Map<String, Object> payload) {
+    public Map<String, Object> handleWebSocket(Map<String, Object> payload) {
         String action = (String) payload.get("action");
         Integer userId = Integer.parseInt(payload.get("user_id").toString());
         String serviceName = (String) payload.get("service_name");
@@ -47,18 +48,48 @@ public class SubscriptionWebSocketController {
         }
     }
 
-    // Lookup phone number and send OTP
+    // ---------------- REST Endpoints for Postman ----------------
+    @RestController
+    @RequestMapping("/api")
+    class SubscriptionRestController {
+
+        @PostMapping("/subscribe")
+        public Map<String,Object> restSubscribe(@RequestParam String userId, @RequestParam String serviceName) {
+            return sendOtp(Integer.parseInt(userId), serviceName, "subscribe");
+        }
+
+        @PostMapping("/verify_subscribe")
+        public Map<String,Object> restVerifySubscribe(@RequestParam String userId,
+                                                      @RequestParam String serviceName,
+                                                      @RequestParam String otp) {
+            return verifyAndSubscribe(Integer.parseInt(userId), serviceName, otp);
+        }
+
+        @PostMapping("/unsubscribe")
+        public Map<String,Object> restUnsubscribe(@RequestParam String userId, @RequestParam String serviceName) {
+            return sendOtp(Integer.parseInt(userId), serviceName, "unsubscribe");
+        }
+
+        @PostMapping("/verify_unsubscribe")
+        public Map<String,Object> restVerifyUnsubscribe(@RequestParam String userId,
+                                                        @RequestParam String serviceName,
+                                                        @RequestParam String otp) {
+            return verifyAndUnsubscribe(Integer.parseInt(userId), serviceName, otp);
+        }
+    }
+
+    // ---------------- Common methods ----------------
     private Map<String, Object> sendOtp(int userId, String serviceName, String type) {
         String phone = getUserPhoneNumber(userId);
 
-        // Simulate sending OTP (for testing, no real SMS)
+        // Simulated OTP for testing
         String simulatedOtp = "1234";
         subscriptionService.storeOtp(phone, simulatedOtp);
 
         return Map.of(
                 "status", "otp_sent",
                 "message", "OTP sent for " + type + " to phone " + phone,
-                "simulatedOtp", simulatedOtp // for testing only
+                "simulatedOtp", simulatedOtp // For testing only
         );
     }
 
@@ -69,7 +100,6 @@ public class SubscriptionWebSocketController {
         }
 
         boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
-
         return success ?
                 Map.of("status", "success", "message", "Subscription successful for " + serviceName) :
                 Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
@@ -82,13 +112,11 @@ public class SubscriptionWebSocketController {
         }
 
         boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
-
         return success ?
                 Map.of("status", "success", "message", "Unsubscription successful for " + serviceName) :
                 Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
     }
 
-    // Helper: fetch phone number from DB
     private String getUserPhoneNumber(int userId) {
         String sql = "SELECT user_phone_number FROM user WHERE user_id = ?";
         return jdbcTemplate.queryForObject(sql, new Object[]{userId}, String.class);
