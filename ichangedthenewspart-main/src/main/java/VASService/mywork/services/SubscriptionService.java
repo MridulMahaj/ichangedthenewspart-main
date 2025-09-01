@@ -43,4 +43,20 @@ public class SubscriptionService {
         String sql = "SELECT user_phone_number FROM user WHERE user_id = ?";
         return jdbcTemplate.queryForObject(sql, new Object[]{userId}, String.class);
     }
+
+    public Subscription getLatestSubscription(String userId, String serviceName) {
+        String sql = "SELECT * FROM subscriptions WHERE user_id = ? AND service_name = ? ORDER BY updated_at DESC LIMIT 1";
+        return jdbcTemplate.queryForObject(sql, new Object[]{userId, serviceName}, (rs, rowNum) -> {
+            Subscription sub = new Subscription();
+            sub.setId(rs.getInt("id"));
+            sub.setUserId(rs.getInt("user_id"));
+            sub.setServiceName(rs.getString("service_name"));
+            sub.setBillingId(rs.getInt("billing_id"));
+            sub.setActive(rs.getBoolean("active"));
+            sub.setSubscriptionDate(rs.getString("subscription_date"));
+            sub.setUpdatedAt(rs.getString("updated_at"));
+            return sub;
+        });
+    }
+
 }
