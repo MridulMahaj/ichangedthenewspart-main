@@ -14,8 +14,7 @@ public class SubscriptionService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // Subscribe user
-    public boolean subscribeUser(int userId, String serviceName) {
+    public boolean subscribeUser(String userId, String serviceName) {
         try {
             int billingId = billingService.chargeUser(userId, serviceName);
             String sql = "INSERT INTO subscriptions (user_id, service_name, billing_id, active) VALUES (?, ?, ?, ?)";
@@ -28,8 +27,7 @@ public class SubscriptionService {
         }
     }
 
-    // Unsubscribe user
-    public boolean unsubscribeUser(int userId, String serviceName) {
+    public boolean unsubscribeUser(String userId, String serviceName) {
         try {
             String sql = "UPDATE subscriptions SET active = 0, updated_at = NOW() WHERE user_id = ? AND service_name = ?";
             int rows = jdbcTemplate.update(sql, userId, serviceName);
@@ -39,5 +37,10 @@ public class SubscriptionService {
             System.err.println("Error in unsubscribeUser: " + e.getMessage());
             return false;
         }
+    }
+
+    public String getUserPhoneNumber(String userId) {
+        String sql = "SELECT user_phone_number FROM user WHERE user_id = ?";
+        return jdbcTemplate.queryForObject(sql, new Object[]{userId}, String.class);
     }
 }
