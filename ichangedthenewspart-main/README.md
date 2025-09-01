@@ -5,3 +5,6 @@ OTP service used is Message Central API because Twilio SMS I could only send mes
 Sending of OTP and verification of OTP done
 
 USER AUTHENTICATION MODULE COMPLETED
+
+
+Majority of the application is completed, what's left to test is just WebSockets
