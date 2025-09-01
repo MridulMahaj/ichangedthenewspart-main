@@ -22,18 +22,25 @@ public class SubscriptionController {
     @PostMapping("/subscribe")
     public ResponseEntity<Object> subscribe(@RequestParam String userId, @RequestParam String serviceName) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
-        Map<String, String> request = Map.of("user_phone_number", phone);
+        if (phone == null) {
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
+        }
 
-        Map<String, String> response = restTemplate.postForObject("http://localhost:8080/sendotp", request, Map.class);
+        try {
+            Map<String, String> request = Map.of("user_phone_number", phone);
+            Map<String, String> response = restTemplate.postForObject("http://localhost:8080/sendotp", request, Map.class);
 
-        if ("success".equalsIgnoreCase(response.get("status"))) {
-            return ResponseEntity.ok(Map.of(
-                    "status", "otp_sent",
-                    "message", "OTP sent to " + phone + " for service " + serviceName,
-                    "otp_demo", response.get("otp") // for testing only
-            ));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", response.get("message")));
+            if ("success".equalsIgnoreCase(response.get("status"))) {
+                return ResponseEntity.ok(Map.of(
+                        "status", "otp_sent",
+                        "message", "OTP sent to " + phone + " for service " + serviceName,
+                        "otp_demo", response.get("otp") // for testing only
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", response.get("message")));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "OTP service failed: " + e.getMessage()));
         }
     }
 
@@ -42,37 +49,51 @@ public class SubscriptionController {
                                                   @RequestParam String serviceName,
                                                   @RequestParam String otp) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
-        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
-
-        Map<String, String> response = restTemplate.postForObject("http://localhost:8080/verifyotp", request, Map.class);
-
-        if (!"success".equalsIgnoreCase(response.get("status"))) {
-            return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
+        if (phone == null) {
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
-        boolean success = subscriptionService.subscribeUser(userId, serviceName);
-        Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
+        try {
+            Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
+            Map<String, String> response = restTemplate.postForObject("http://localhost:8080/verifyotp", request, Map.class);
 
-        return success
-                ? ResponseEntity.ok(Map.of("status", "success", "subscription", updated))
-                : ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "Subscription failed"));
+            if (!"success".equalsIgnoreCase(response.get("status"))) {
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
+            }
+
+            boolean success = subscriptionService.subscribeUser(userId, serviceName);
+            Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
+
+            return success && updated != null
+                    ? ResponseEntity.ok(Map.of("status", "success", "subscription", updated))
+                    : ResponseEntity.status(500).body(Map.of("status", "failed", "message", "Subscription failed"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "Verification failed: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/unsubscribe")
     public ResponseEntity<Object> unsubscribe(@RequestParam String userId, @RequestParam String serviceName) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
-        Map<String, String> request = Map.of("user_phone_number", phone);
+        if (phone == null) {
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
+        }
 
-        Map<String, String> response = restTemplate.postForObject("http://localhost:8080/sendotp", request, Map.class);
+        try {
+            Map<String, String> request = Map.of("user_phone_number", phone);
+            Map<String, String> response = restTemplate.postForObject("http://localhost:8080/sendotp", request, Map.class);
 
-        if ("success".equalsIgnoreCase(response.get("status"))) {
-            return ResponseEntity.ok(Map.of(
-                    "status", "otp_sent",
-                    "message", "OTP sent to " + phone + " for unsubscribing from " + serviceName,
-                    "otp_demo", response.get("otp")
-            ));
-        } else {
-            return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", response.get("message")));
+            if ("success".equalsIgnoreCase(response.get("status"))) {
+                return ResponseEntity.ok(Map.of(
+                        "status", "otp_sent",
+                        "message", "OTP sent to " + phone + " for unsubscribing from " + serviceName,
+                        "otp_demo", response.get("otp")
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", response.get("message")));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "OTP service failed: " + e.getMessage()));
         }
     }
 
@@ -81,19 +102,26 @@ public class SubscriptionController {
                                                     @RequestParam String serviceName,
                                                     @RequestParam String otp) {
         String phone = subscriptionService.getUserPhoneNumber(userId);
-        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
-
-        Map<String, String> response = restTemplate.postForObject("http://localhost:8080/verifyotp", request, Map.class);
-
-        if (!"success".equalsIgnoreCase(response.get("status"))) {
-            return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
+        if (phone == null) {
+            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found"));
         }
 
-        boolean success = subscriptionService.unsubscribeUser(userId, serviceName);
-        Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
+        try {
+            Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
+            Map<String, String> response = restTemplate.postForObject("http://localhost:8080/verifyotp", request, Map.class);
 
-        return success
-                ? ResponseEntity.ok(Map.of("status", "success", "subscription", updated))
-                : ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "Unsubscription failed"));
+            if (!"success".equalsIgnoreCase(response.get("status"))) {
+                return ResponseEntity.badRequest().body(Map.of("status", "failed", "message", "OTP verification failed"));
+            }
+
+            boolean success = subscriptionService.unsubscribeUser(userId, serviceName);
+            Subscription updated = subscriptionService.getLatestSubscription(userId, serviceName);
+
+            return success && updated != null
+                    ? ResponseEntity.ok(Map.of("status", "success", "subscription", updated))
+                    : ResponseEntity.status(500).body(Map.of("status", "failed", "message", "Unsubscription failed"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", "Verification failed: " + e.getMessage()));
+        }
     }
 }
