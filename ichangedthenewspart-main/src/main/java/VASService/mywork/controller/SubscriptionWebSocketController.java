@@ -5,6 +5,7 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.client.RestTemplate;
 import VASService.mywork.services.SubscriptionService;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.Map;
 
@@ -13,13 +14,16 @@ public class SubscriptionWebSocketController {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final SubscriptionService subscriptionService;
+    private final JdbcTemplate jdbcTemplate;
 
-    public SubscriptionWebSocketController(SubscriptionService subscriptionService) {
+    public SubscriptionWebSocketController(SubscriptionService subscriptionService, JdbcTemplate jdbcTemplate) {
         this.subscriptionService = subscriptionService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
-    @MessageMapping("/subscription")        // Client sends to /app/subscription
-    @SendTo("/topic/subscription")          // Server sends responses to /topic/subscription
+    // WebSocket STOMP entry point
+    @MessageMapping("/subscription")
+    @SendTo("/topic/subscription")
     public Map<String, Object> handleMessage(Map<String, Object> payload) {
         String action = (String) payload.get("action");
         Integer userId = Integer.parseInt(payload.get("user_id").toString());
@@ -43,50 +47,50 @@ public class SubscriptionWebSocketController {
         }
     }
 
+    // Lookup phone number and send OTP
     private Map<String, Object> sendOtp(int userId, String serviceName, String type) {
-        String url = "http://localhost:8080/sendotp";
-        Map<String, String> request = Map.of("user_phone_number", String.valueOf(userId));
-        Map response = restTemplate.postForObject(url, request, Map.class);
+        String phone = getUserPhoneNumber(userId);
+
+        // Simulate sending OTP (for testing, no real SMS)
+        String simulatedOtp = "1234";
+        subscriptionService.storeOtp(phone, simulatedOtp);
 
         return Map.of(
                 "status", "otp_sent",
-                "message", "OTP sent for " + type + " to user " + userId + " for service " + serviceName,
-                "response", response
+                "message", "OTP sent for " + type + " to phone " + phone,
+                "simulatedOtp", simulatedOtp // for testing only
         );
     }
 
     private Map<String, Object> verifyAndSubscribe(int userId, String serviceName, String otp) {
-        if (!verifyOtp(String.valueOf(userId), otp)) {
+        String phone = getUserPhoneNumber(userId);
+        if (!subscriptionService.verifyOtp(phone, otp)) {
             return Map.of("status", "failed", "message", "OTP verification failed");
         }
 
         boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
-        return Map.of(
-                "status", success ? "success" : "failed",
-                "message", success
-                        ? "Subscription successful for " + serviceName
-                        : "Subscription failed for " + serviceName
-        );
+
+        return success ?
+                Map.of("status", "success", "message", "Subscription successful for " + serviceName) :
+                Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
     }
 
     private Map<String, Object> verifyAndUnsubscribe(int userId, String serviceName, String otp) {
-        if (!verifyOtp(String.valueOf(userId), otp)) {
+        String phone = getUserPhoneNumber(userId);
+        if (!subscriptionService.verifyOtp(phone, otp)) {
             return Map.of("status", "failed", "message", "OTP verification failed");
         }
 
         boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
-        return Map.of(
-                "status", success ? "success" : "failed",
-                "message", success
-                        ? "Unsubscription successful for " + serviceName
-                        : "Unsubscription failed for " + serviceName
-        );
+
+        return success ?
+                Map.of("status", "success", "message", "Unsubscription successful for " + serviceName) :
+                Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
     }
 
-    private boolean verifyOtp(String phone, String otp) {
-        String url = "http://localhost:8080/verifyotp";
-        Map<String, Object> request = Map.of("user_phone_number", phone, "otp", otp);
-        Map response = restTemplate.postForObject(url, request, Map.class);
-        return "success".equalsIgnoreCase((String) response.get("status"));
+    // Helper: fetch phone number from DB
+    private String getUserPhoneNumber(int userId) {
+        String sql = "SELECT user_phone_number FROM user WHERE user_id = ?";
+        return jdbcTemplate.queryForObject(sql, new Object[]{userId}, String.class);
     }
 }
