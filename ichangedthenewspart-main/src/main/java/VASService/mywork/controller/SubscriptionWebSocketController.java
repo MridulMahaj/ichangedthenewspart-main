@@ -18,8 +18,8 @@ public class SubscriptionWebSocketController {
         this.subscriptionService = subscriptionService;
     }
 
-    @MessageMapping("/subscription")
-    @SendTo("/topic/subscription")
+    @MessageMapping("/subscription")        // Client sends to /app/subscription
+    @SendTo("/topic/subscription")          // Server sends responses to /topic/subscription
     public Map<String, Object> handleMessage(Map<String, Object> payload) {
         String action = (String) payload.get("action");
         Integer userId = Integer.parseInt(payload.get("user_id").toString());
@@ -61,12 +61,12 @@ public class SubscriptionWebSocketController {
         }
 
         boolean success = subscriptionService.subscribeUser(String.valueOf(userId), serviceName);
-
-        if (success) {
-            return Map.of("status", "success", "message", "Subscription successful for " + serviceName);
-        } else {
-            return Map.of("status", "failed", "message", "Subscription failed for " + serviceName);
-        }
+        return Map.of(
+                "status", success ? "success" : "failed",
+                "message", success
+                        ? "Subscription successful for " + serviceName
+                        : "Subscription failed for " + serviceName
+        );
     }
 
     private Map<String, Object> verifyAndUnsubscribe(int userId, String serviceName, String otp) {
@@ -75,12 +75,12 @@ public class SubscriptionWebSocketController {
         }
 
         boolean success = subscriptionService.unsubscribeUser(String.valueOf(userId), serviceName);
-
-        if (success) {
-            return Map.of("status", "success", "message", "Unsubscription successful for " + serviceName);
-        } else {
-            return Map.of("status", "failed", "message", "Unsubscription failed for " + serviceName);
-        }
+        return Map.of(
+                "status", success ? "success" : "failed",
+                "message", success
+                        ? "Unsubscription successful for " + serviceName
+                        : "Unsubscription failed for " + serviceName
+        );
     }
 
     private boolean verifyOtp(String phone, String otp) {
