@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import java.util.Map;
+
 @RestController
 
 @CrossOrigin(origins = "http://localhost:3000/" )
@@ -52,33 +54,38 @@ public class MainController {
     // ================= Subscription Flow (via OTP) =================
 
     @PostMapping("/subscribe")
-    public ResponseEntity<Object> subscribe(@RequestParam String phoneNumber) {
+    public ResponseEntity<Object> subscribe(@RequestParam String user_phone_number) {
         String url = "http://localhost:8080/sendotp";
-        Map<String, String> body = Map.of("phone", phoneNumber);
 
-        Object response = restTemplate.postForObject(url, body, Object.class);
+        // send JSON body
+        Map<String, String> request = Map.of("user_phone_number", user_phone_number);
+        Map response = restTemplate.postForObject(url, request, Map.class);
 
         return ResponseEntity.ok(
                 Map.of(
-                        "message", "OTP sent to " + phoneNumber,
+                        "message", "OTP sent to " + user_phone_number,
                         "response", response
                 )
         );
     }
 
-
     @PostMapping("/verify-subscribe")
-    public ResponseEntity<Object> verifySubscribe(@RequestParam String phoneNumber, @RequestParam String otp) {
+    public ResponseEntity<Object> verifySubscribe(@RequestParam String user_phone_number,
+                                                  @RequestParam String otp) {
         String url = "http://localhost:8080/verifyotp";
-        Map<String, String> body = Map.of("phone", phoneNumber, "otp", otp);
 
-        String response = restTemplate.postForObject(url, body, String.class);
+        // send JSON body
+        Map<String, Object> request = Map.of(
+                "user_phone_number", user_phone_number,
+                "otp", otp
+        );
+        Map response = restTemplate.postForObject(url, request, Map.class);
 
-        if ("success".equalsIgnoreCase(response)) {
+        if ("success".equalsIgnoreCase((String) response.get("status"))) {
             return ResponseEntity.ok(
                     Map.of(
                             "status", "success",
-                            "message", "Subscription successful for " + phoneNumber
+                            "message", "Subscription successful for " + user_phone_number
                     )
             );
         } else {
@@ -91,38 +98,48 @@ public class MainController {
         }
     }
 
-
     @PostMapping("/unsubscribe")
-    public ResponseEntity<Object> unsubscribe(@RequestParam String phoneNumber) {
-        String url = "http://localhost:8080/sendotp?phone=" + phoneNumber;
-        Object response = restTemplate.postForObject(url, Object.class);
+    public ResponseEntity<Object> unsubscribe(@RequestParam String user_phone_number) {
+        String url = "http://localhost:8080/sendotp";
+
+        Map<String, String> request = Map.of("user_phone_number", user_phone_number);
+        Map response = restTemplate.postForObject(url, request, Map.class);
+
         return ResponseEntity.ok(
-                java.util.Map.of(
-                        "message", "OTP sent for unsubscribe to " + phoneNumber,
+                Map.of(
+                        "message", "OTP sent for unsubscribe to " + user_phone_number,
                         "response", response
                 )
         );
     }
 
     @PostMapping("/verify-unsubscribe")
-    public ResponseEntity<Object> verifyUnsubscribe(@RequestParam String phoneNumber, @RequestParam String otp) {
-        String url = "http://localhost:8080/verifyotp?phone=" + phoneNumber + "&otp=" + otp;
-        String response = restTemplate.getForObject(url, String.class);
+    public ResponseEntity<Object> verifyUnsubscribe(@RequestParam String user_phone_number,
+                                                    @RequestParam String otp) {
+        String url = "http://localhost:8080/verifyotp";
 
-        if ("success".equalsIgnoreCase(response)) {
+        Map<String, Object> request = Map.of(
+                "user_phone_number", user_phone_number,
+                "otp", otp
+        );
+        Map response = restTemplate.postForObject(url, request, Map.class);
+
+        if ("success".equalsIgnoreCase((String) response.get("status"))) {
             return ResponseEntity.ok(
-                    java.util.Map.of(
+                    Map.of(
                             "status", "success",
-                            "message", "Unsubscription successful for " + phoneNumber
+                            "message", "Unsubscription successful for " + user_phone_number
                     )
             );
         } else {
             return ResponseEntity.ok(
-                    java.util.Map.of(
+                    Map.of(
                             "status", "failed",
                             "message", "OTP verification failed for unsubscription."
                     )
             );
         }
     }
+
+
 }
