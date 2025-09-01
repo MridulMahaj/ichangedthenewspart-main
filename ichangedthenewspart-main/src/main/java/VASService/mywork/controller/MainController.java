@@ -53,37 +53,44 @@ public class MainController {
 
     @PostMapping("/subscribe")
     public ResponseEntity<Object> subscribe(@RequestParam String phoneNumber) {
-        String url = "http://localhost:8080/sendotp?phone=" + phoneNumber;
-        Object response = restTemplate.postForObject(url, Object.class);
+        String url = "http://localhost:8080/sendotp";
+        Map<String, String> body = Map.of("phone", phoneNumber);
+
+        Object response = restTemplate.postForObject(url, body, Object.class);
+
         return ResponseEntity.ok(
-                java.util.Map.of(
+                Map.of(
                         "message", "OTP sent to " + phoneNumber,
                         "response", response
                 )
         );
     }
 
+
     @PostMapping("/verify-subscribe")
     public ResponseEntity<Object> verifySubscribe(@RequestParam String phoneNumber, @RequestParam String otp) {
-        String url = "http://localhost:8080/verifyotp?phone=" + phoneNumber + "&otp=" + otp;
-        String response = restTemplate.getForObject(url, String.class);
+        String url = "http://localhost:8080/verifyotp";
+        Map<String, String> body = Map.of("phone", phoneNumber, "otp", otp);
+
+        String response = restTemplate.postForObject(url, body, String.class);
 
         if ("success".equalsIgnoreCase(response)) {
             return ResponseEntity.ok(
-                    java.util.Map.of(
+                    Map.of(
                             "status", "success",
                             "message", "Subscription successful for " + phoneNumber
                     )
             );
         } else {
             return ResponseEntity.ok(
-                    java.util.Map.of(
+                    Map.of(
                             "status", "failed",
                             "message", "OTP verification failed for subscription."
                     )
             );
         }
     }
+
 
     @PostMapping("/unsubscribe")
     public ResponseEntity<Object> unsubscribe(@RequestParam String phoneNumber) {
